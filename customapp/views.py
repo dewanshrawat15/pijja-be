@@ -38,6 +38,14 @@ def generate_rank(src_di):
 
 
 class UserRequestView(APIView):
+
+    @swagger_auto_schema(request_body=UserCreationSerializer)
+    def post(self, request):
+        user_creation_serializer = UserCreationSerializer(data = request.data)
+        if user_creation_serializer.is_valid():
+            user_creation_serializer.save()
+            return Response(user_creation_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(user_creation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def get(self, request):
         try:
@@ -47,16 +55,9 @@ class UserRequestView(APIView):
         except Exception as e:
             print(e)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 class UserDetailView(APIView):
-
-    @swagger_auto_schema(request_body=UserCreationSerializer)
-    def post(self, request):
-        user_creation_serializer = UserCreationSerializer(data = request.data)
-        if user_creation_serializer.is_valid():
-            user_creation_serializer.save()
-            return Response(user_creation_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(user_creation_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
     def get(self, request, user_id):
@@ -71,6 +72,26 @@ class UserDetailView(APIView):
             return Response({
                 "message": "Data fetched for " + user_id,
                 "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
+            return Response({
+                "message": "Something went wrong"
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    def delete(self, request, user_id):
+        try:
+            users = DumDumUser.objects.filter(user_id = user_id)
+            if len(users) == 0 or len(users) > 1:
+                if len(users) == 0:
+                    raise Exception("User not found")
+                else:
+                    raise Exception("Multiple users found")
+            user = users[0]
+            user.delete()
+            return Response({
+                "message": "User " + user_id + " data deleted successfully",
             }, status=status.HTTP_200_OK)
         except Exception as e:
             print(e)
