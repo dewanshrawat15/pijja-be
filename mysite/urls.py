@@ -28,8 +28,8 @@ urlpatterns = [
    path('api/user/<str:user_id>/history', UserPizzaHistoryView.as_view(), name='user_history_view'),
    path('api/leaderboard/', LeaderboardView.as_view(), name='leaderboard_view'),
    path('api/pizza/buy/', BuyPizzaView.as_view(), name='buy_pizza_view'),
-   path('api/pizza/log/', LogPizzaView.as_view(), name='buy_pizza_view'),
-   path('api/pizza/log/get/', GetPizzasToLogView.as_view(), name='buy_pizza_view'),
+   path('api/pizza/log/', LogPizzaView.as_view(), name='log_pizza_view'),
+   path('api/pizza/log/get/', GetPizzasToLogView.as_view(), name='get_log_pizza_view'),
 
    path('api/pizza/logged/delete', DeleteLoggedPizzas.as_view(), name='delete_logged_pizzas')
 ]

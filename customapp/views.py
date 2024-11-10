@@ -11,17 +11,23 @@ from drf_yasg.utils import swagger_auto_schema
 def generate_rank(src_di):
     sortable = []
     for key, val in src_di.items():
-        timestamps = [x.timestamp() * 1000 for x in val['pizzas']]  # Convert to milliseconds
-        timestamps.sort()
         user_name = val['name']
+        pizza_data = []  # List to store pizza name and timestamp
+        for pizza in val['pizzas']:
+            pizza_data.append({
+                "name": pizza["name"],  # Access pizza name
+                "timestamp": pizza["timestamp"].timestamp() * 1000 # Convert to milliseconds
+            })
+        pizza_data.sort(key=lambda x: x["timestamp"])  # Sort pizza data by timestamp
         sortable.append((
-            len(timestamps),
-            timestamps[-1], # Use -1 to access the last element efficiently
+            len(pizza_data),
+            pizza_data[-1]["timestamp"] if pizza_data else 0, # Handle empty pizza_data
             key,
             user_name,
-            timestamps
+            pizza_data # Now includes pizza name and timestamp
         ))
-    sortable.sort(key=lambda x: (-x[0], x[1])) # Sort by length desc, then timestamp asc
+
+    sortable.sort(key=lambda x: (-x[0], x[1]))
     user_rank = {}
     counter = 1
     for item in sortable:
@@ -30,7 +36,7 @@ def generate_rank(src_di):
         user_rank[user_id] = {
             "name": name,
             "rank": counter,
-            "timestamps": item[4]
+            "pizzas": item[4] # Store the list of pizza data (name and timestamp)
         }
         counter += 1
     return user_rank
@@ -50,7 +56,7 @@ class UserRequestView(APIView):
         try:
             users = DumDumUser.objects.all()
             serializer = UserSerializer(users, many = True)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             print(e)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -71,6 +77,33 @@ class UserDetailView(APIView):
             return Response({
                 "message": "Data fetched for " + user_id,
                 "data": serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
+            return Response({
+                "message": "Something went wrong"
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(request_body=UserCreationSerializer)
+    def post(self, request, user_id):
+        try:
+            users = DumDumUser.objects.filter(user_id = user_id)
+            if len(users) == 0 or len(users) > 1:
+                if len(users) == 0:
+                    raise Exception("User not found")
+                else:
+                    raise Exception("Multiple users found")
+            valid_user = users[0]
+            reqData = request.data
+            name = reqData["user_name"]
+            age = reqData["age"]
+            gender = reqData["gender"]
+            valid_user.user_name = name
+            valid_user.age = age
+            valid_user.gender = gender
+            valid_user.save()
+            return Response({
+                "message": "User updated successfully"
             }, status=status.HTTP_200_OK)
         except Exception as e:
             print(e)
@@ -121,11 +154,17 @@ class LeaderboardView(APIView):
         for pizza in pizzas:
             val = userToPijjaDict.get(pizza.purchased_by.user_id, None)
             if val:
-                val["pizzas"].append(pizza.last_modified_at)
+                val["pizzas"].append({
+                    "name": pizza.name,
+                    "timestamp": pizza.last_modified_at
+                })
             else:
                 val = {
                     "name": pizza.purchased_by.user_name,
-                    "pizzas": [pizza.last_modified_at]
+                    "pizzas": [{
+                        "name": pizza.name,
+                        "timestamp": pizza.last_modified_at
+                    }]
                 }
             userToPijjaDict[pizza.purchased_by.user_id] = val
         leaderboard_di = generate_rank(userToPijjaDict)
