@@ -3,7 +3,7 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from django.contrib import admin
-from customapp.views import GetPizzasToLogView, UserRequestView, LeaderboardView, BuyPizzaView, LogPizzaView, UserDetailView
+from customapp.views import GetPizzasToLogView, UserPizzaHistoryView, UserRequestView, LeaderboardView, BuyPizzaView, LogPizzaView, UserDetailView
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -25,6 +25,7 @@ urlpatterns = [
    path('admin/', admin.site.urls),
    path('api/user/', UserRequestView.as_view(), name='user_creation_view'),
    path('api/user/<str:user_id>', UserDetailView.as_view(), name='user_detail_view'),
+   path('api/user/<str:user_id>/history', UserPizzaHistoryView.as_view(), name='user_history_view'),
    path('api/leaderboard/', LeaderboardView.as_view(), name='leaderboard_view'),
    path('api/pizza/buy/', BuyPizzaView.as_view(), name='buy_pizza_view'),
    path('api/pizza/log/', LogPizzaView.as_view(), name='buy_pizza_view'),

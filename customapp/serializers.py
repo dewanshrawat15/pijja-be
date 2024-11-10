@@ -27,4 +27,19 @@ class LogPijjaSerializer(Serializer):
 class PijjaSerializer(ModelSerializer):
     class Meta:
         model = Pijja
-        fields = ['pijja_id', 'price']
+        fields = ['pijja_id', 'price', 'name']
+
+class PijjaHistorySerializer(ModelSerializer):
+    class Meta:
+        model = Pijja
+        fields = ['pijja_id', 'price', 'name', 'last_modified_at']
+    
+    def to_representation(self, instance):
+        last_modified_at = instance.last_modified_at.timestamp()
+
+        return {
+            'pijja_id': instance.pijja_id,
+            'price': instance.price,
+            'name': instance.name,
+            'last_modified_at': last_modified_at
+        }

@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import UserCreationSerializer, BuyPizzaSerializer, LogPijjaSerializer, UserIDSerializer, UserSerializer, PijjaSerializer
+from .serializers import PijjaHistorySerializer, UserCreationSerializer, BuyPizzaSerializer, LogPijjaSerializer, UserIDSerializer, UserSerializer, PijjaSerializer
 from .models import DumDumUser, Pijja
 from collections import defaultdict
 from drf_yasg.utils import swagger_auto_schema
@@ -219,3 +219,10 @@ class GetPizzasToLogView(APIView):
             return Response({
                 "message": "Something went wrong"
             }, status=status.HTTP_400_BAD_REQUEST)
+
+class UserPizzaHistoryView(APIView):
+
+    def get(self, request, user_id):
+        qs = Pijja.objects.filter(purchased_by = user_id, state = 'LOGGED')
+        serializer = PijjaHistorySerializer(qs, many = True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
