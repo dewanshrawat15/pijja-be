@@ -8,21 +8,20 @@ from collections import defaultdict
 from drf_yasg.utils import swagger_auto_schema
 # Create your views here.
 
-
 def generate_rank(src_di):
     sortable = []
-    print(src_di)
     for key, val in src_di.items():
-        timestamps = [x[1] for x in val]
-        user_name = val[0][0]
+        timestamps = [x.timestamp() * 1000 for x in val['pizzas']]  # Convert to milliseconds
+        timestamps.sort()
+        user_name = val['name']
         sortable.append((
             len(timestamps),
-            max(timestamps),
+            timestamps[-1], # Use -1 to access the last element efficiently
             key,
             user_name,
+            timestamps
         ))
-    print(sortable)
-    sortable.sort(key = lambda x: (-x[0], -x[1] or float('inf')))
+    sortable.sort(key=lambda x: (-x[0], x[1])) # Sort by length desc, then timestamp asc
     user_rank = {}
     counter = 1
     for item in sortable:
@@ -30,11 +29,11 @@ def generate_rank(src_di):
         name = item[3]
         user_rank[user_id] = {
             "name": name,
-            "rank": counter
+            "rank": counter,
+            "timestamps": item[4]
         }
         counter += 1
     return user_rank
-
 
 
 class UserRequestView(APIView):
@@ -99,14 +98,36 @@ class UserDetailView(APIView):
                 "message": "Something went wrong"
             }, status=status.HTTP_400_BAD_REQUEST)
 
+class DeleteLoggedPizzas(APIView):
+
+    def delete(self, request):
+        try:
+            Pijja.objects.filter(state = 'LOGGED').delete()
+            return Response({
+                "message": "Logged pizzas deleted"
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
+            return Response({
+                "message": "Something went wrong"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
 class LeaderboardView(APIView):
 
     def get(self, request):
-        userToPijjaDict = defaultdict(list)
-        pizzas = Pijja.objects.filter(state = 'LOGGED')
+        userToPijjaDict = {}
+        pizzas = Pijja.objects.filter(state = 'LOGGED').order_by('last_modified_at')
 
         for pizza in pizzas:
-            userToPijjaDict[pizza.purchased_by.user_id].append([pizza.purchased_by.user_name, pizza.purchased_at.timestamp() * 1000])
+            val = userToPijjaDict.get(pizza.purchased_by.user_id, None)
+            if val:
+                val["pizzas"].append(pizza.last_modified_at)
+            else:
+                val = {
+                    "name": pizza.purchased_by.user_name,
+                    "pizzas": [pizza.last_modified_at]
+                }
+            userToPijjaDict[pizza.purchased_by.user_id] = val
         leaderboard_di = generate_rank(userToPijjaDict)
 
         return Response(leaderboard_di, status=status.HTTP_200_OK)
